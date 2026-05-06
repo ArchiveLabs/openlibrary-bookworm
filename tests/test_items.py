@@ -5,9 +5,9 @@ def _make_batch(client):
 def _add_items(client, batch_id, n=3):
     items = [
         {
-            "source": "bwb",
+            "source": "isbn_13",
             "value": f"978000000000{i}",
-            "data": {"title": f"Book {i}", "source_records": [f"bwb:978000000000{i}"]},
+            "data": {"title": f"Book {i}", "source_records": [f"isbn_13:978000000000{i}"]},
         }
         for i in range(n)
     ]
@@ -35,13 +35,13 @@ def test_get_pending_limit_must_be_positive(client):
 def test_get_pending_excludes_non_pending(client):
     batch_id = _make_batch(client)
     items = [
-        {"source": "bwb", "value": "9780001", "data": {"title": "A", "source_records": ["bwb:9780001"]}, "status": "pending"},
-        {"source": "bwb", "value": "9780002", "data": {"title": "B", "source_records": ["bwb:9780002"]}, "status": "created"},
+        {"source": "isbn_13", "value": "9780001000001", "data": {"title": "A", "source_records": ["isbn_13:9780001000001"]}, "status": "pending"},
+        {"source": "isbn_13", "value": "9780002000000", "data": {"title": "B", "source_records": ["isbn_13:9780002000000"]}, "status": "created"},
     ]
     client.post(f"/v1/batches/{batch_id}/items", json=items)
     r = client.get("/v1/items/pending")
     assert len(r.json()) == 1
-    assert r.json()[0]["value"] == "9780001"
+    assert r.json()[0]["value"] == "9780001000001"
 
 
 def test_patch_item_status(client):
@@ -63,9 +63,7 @@ def test_patch_does_not_clear_unset_fields(client):
     _add_items(client, batch_id, n=1)
     item_id = client.get("/v1/items/pending").json()[0]["id"]
 
-    # First set an error
     client.patch(f"/v1/items/{item_id}", json={"status": "failed", "error": "timeout"})
-    # Now patch only status — error should be preserved
     r = client.patch(f"/v1/items/{item_id}", json={"status": "pending"})
     assert r.json()["error"] == "timeout"
 

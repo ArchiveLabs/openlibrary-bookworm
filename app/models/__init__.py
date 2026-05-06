@@ -1,5 +1,6 @@
 from app.models.imports import (
     KNOWN_SOURCES,
+    VALID_SOURCE_NAMES,
     VALID_STATUSES,
     Base,
     BatchCreate,
@@ -13,12 +14,12 @@ from app.models.imports import (
     ItemStatusPatch,
     ItemValidationError,
     ItemsResult,
-    SourceType,
     validate_import_record,
 )
 
 __all__ = [
     "KNOWN_SOURCES",
+    "VALID_SOURCE_NAMES",
     "VALID_STATUSES",
     "Base",
     "ImportBatch",
@@ -32,6 +33,5 @@ __all__ = [
     "ItemStatusPatch",
     "ItemValidationError",
     "ItemsResult",
-    "SourceType",
     "validate_import_record",
 ]
