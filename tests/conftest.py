@@ -7,16 +7,12 @@ No running database is required.
 """
 import os
 
-# Must be set before any app.config import so Settings() picks them up.
-os.environ.setdefault("API_KEYS", "test-key")
 os.environ.setdefault("DATABASE_URL", "sqlite://")
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import StaticPool, create_engine
 from sqlalchemy.orm import sessionmaker
-
-TEST_API_KEY = "test-key"
 
 
 @pytest.fixture()
@@ -50,7 +46,3 @@ def client(db_session):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
-
-
-def auth_headers() -> dict:
-    return {"Authorization": f"Bearer {TEST_API_KEY}"}

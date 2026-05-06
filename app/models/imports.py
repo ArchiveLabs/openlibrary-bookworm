@@ -1,13 +1,23 @@
 from datetime import datetime, timezone
 
+from pydantic import BaseModel
 from sqlalchemy import DateTime, ForeignKey, Integer, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
+VALID_STATUSES = frozenset(
+    {"pending", "staged", "processing", "failed", "found", "created", "modified", "needs_review"}
+)
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+# ---------------------------------------------------------------------------
+# SQLAlchemy ORM models
+# ---------------------------------------------------------------------------
 
 
 class Base(DeclarativeBase):
@@ -42,3 +52,58 @@ class ImportItem(Base):
     submitter: Mapped[str | None] = mapped_column(Text)
 
     batch: Mapped["ImportBatch"] = relationship(back_populates="items")
+
+
+# ---------------------------------------------------------------------------
+# Pydantic schemas  (request bodies and response shapes)
+# ---------------------------------------------------------------------------
+
+
+class BatchCreate(BaseModel):
+    name: str
+    submitter: str | None = None
+
+
+class BatchResponse(BaseModel):
+    id: int
+    name: str | None
+    submitter: str | None
+    submit_time: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class BatchDetail(BatchResponse):
+    item_counts: dict[str, int]
+
+
+class ItemIn(BaseModel):
+    source_id: str
+    data: dict
+    submitter: str | None = None
+    status: str = "pending"
+
+
+class ItemsResult(BaseModel):
+    added: int
+    skipped: int
+
+
+class ItemResponse(BaseModel):
+    id: int
+    batch_id: int
+    source_id: str | None
+    status: str
+    ol_key: str | None
+    error: str | None
+    submitter: str | None
+    added_time: datetime
+    import_time: datetime | None
+
+    model_config = {"from_attributes": True}
+
+
+class ItemStatusPatch(BaseModel):
+    status: str
+    error: str | None = None
+    ol_key: str | None = None
