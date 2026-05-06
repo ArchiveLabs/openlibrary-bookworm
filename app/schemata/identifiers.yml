@@ -28,6 +28,10 @@ identifiers:
     name: better_world_books
     notes: ''
     url: https://www.betterworldbooks.com/product/detail/@@@
+-   label: Better World Books (short)
+    name: bwb
+    notes: 'Short alias for better_world_books; pending OL PR to add canonically'
+    url: https://www.betterworldbooks.com/product/detail/@@@
 -   label: Biblioteca Nacional de España Depósito Legal
     name: depósito_legal
     notes: ''
