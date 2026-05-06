@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -10,8 +11,10 @@ from app.models import (
     ImportBatch,
     ImportItem,
     ItemIn,
+    ItemValidationError,
     ItemsResult,
     VALID_STATUSES,
+    validate_import_record,
 )
 
 router = APIRouter(tags=["batches"])
@@ -63,35 +66,45 @@ def add_items(
     if db.get(ImportBatch, batch_id) is None:
         raise HTTPException(status_code=404, detail="Batch not found")
 
-    invalid = {i.status for i in items} - VALID_STATUSES
-    if invalid:
+    invalid_statuses = {i.status for i in items} - VALID_STATUSES
+    if invalid_statuses:
         raise HTTPException(
             status_code=422,
-            detail=f"Invalid status values: {sorted(invalid)}. Must be one of {sorted(VALID_STATUSES)}",
+            detail=f"Invalid status values: {sorted(invalid_statuses)}",
         )
 
-    existing = set(
-        db.scalars(
-            select(ImportItem.source_id).where(ImportItem.batch_id == batch_id)
-        ).all()
-    )
-
     added = skipped = 0
-    for item in items:
-        if item.source_id in existing:
-            skipped += 1
+    errors: list[ItemValidationError] = []
+
+    for idx, item in enumerate(items):
+        messages = validate_import_record(item.data)
+        if messages:
+            errors.append(ItemValidationError(
+                index=idx,
+                source=item.source,
+                value=item.value,
+                messages=messages,
+            ))
             continue
-        db.add(
-            ImportItem(
+
+        # Use a savepoint per item so a duplicate-key violation only rolls back
+        # that one insert, not the whole batch. This also handles concurrent
+        # requests inserting the same (batch_id, source, value) without a 500.
+        sp = db.begin_nested()
+        try:
+            db.add(ImportItem(
                 batch_id=batch_id,
-                source_id=item.source_id,
+                source=item.source,
+                value=item.value,
                 data=item.data,
                 submitter=item.submitter,
                 status=item.status,
-            )
-        )
-        existing.add(item.source_id)
-        added += 1
+            ))
+            sp.commit()
+            added += 1
+        except IntegrityError:
+            sp.rollback()
+            skipped += 1
 
     db.commit()
-    return ItemsResult(added=added, skipped=skipped)
+    return ItemsResult(added=added, skipped=skipped, errors=errors)
