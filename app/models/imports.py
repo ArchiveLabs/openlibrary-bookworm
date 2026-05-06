@@ -22,7 +22,7 @@ class ImportBatch(Base):
     submitter: Mapped[str | None] = mapped_column(Text)
     submit_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
-    items: Mapped[list["ImportItem"]] = relationship(back_populates="batch", lazy="dynamic")
+    items: Mapped[list["ImportItem"]] = relationship(back_populates="batch")
 
 
 class ImportItem(Base):
