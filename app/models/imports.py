@@ -72,7 +72,7 @@ class ImportItem(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     batch_id: Mapped[int] = mapped_column(Integer, ForeignKey("import_batch.id"), nullable=False)
-    source: Mapped[str] = mapped_column(Text, nullable=False)  # e.g. "bwb"
+    source: Mapped[str] = mapped_column(Text, nullable=False)  # e.g. "better_world_books"
     value: Mapped[str] = mapped_column(Text, nullable=False)   # e.g. "9780451524935"
     added_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     import_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

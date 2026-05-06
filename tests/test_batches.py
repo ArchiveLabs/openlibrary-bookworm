@@ -1,12 +1,12 @@
 ITEM = {
-    "source": "bwb",
+    "source": "better_world_books",
     "value": "9780451524935",
-    "data": {"title": "1984", "source_records": ["bwb:9780451524935"]},
+    "data": {"title": "1984", "source_records": ["better_world_books:9780451524935"]},
 }
 ITEM2 = {
-    "source": "bwb",
+    "source": "better_world_books",
     "value": "9780060935467",
-    "data": {"title": "To Kill a Mockingbird", "source_records": ["bwb:9780060935467"]},
+    "data": {"title": "To Kill a Mockingbird", "source_records": ["better_world_books:9780060935467"]},
 }
 
 
@@ -55,7 +55,7 @@ def test_duplicate_within_same_batch_is_skipped(client):
 
 
 def test_same_record_allowed_in_different_batches(client):
-    """bwb:X in Jim's batch does not block bwb:X in Mek's batch."""
+    """better_world_books:X in Jim's batch does not block it in Mek's batch."""
     jim_batch = _batch(client, name="bwb-2026-04", submitter="jim")
     mek_batch = _batch(client, name="bwb-2026-05", submitter="mek")
     client.post(f"/v1/batches/{jim_batch}/items", json=[ITEM])
@@ -64,7 +64,7 @@ def test_same_record_allowed_in_different_batches(client):
 
 
 def test_same_submitter_different_batches_allowed(client):
-    """Jim can re-import bwb:X in a later batch run."""
+    """Jim can re-import better_world_books:X in a later batch run."""
     batch_a = _batch(client, name="bwb-2026-04", submitter="jim")
     batch_b = _batch(client, name="bwb-2026-05", submitter="jim")
     client.post(f"/v1/batches/{batch_a}/items", json=[ITEM])
@@ -75,7 +75,7 @@ def test_same_submitter_different_batches_allowed(client):
 def test_incomplete_data_accepted(client):
     """BookWorm does not validate record content — that's OL's job at import time."""
     batch_id = _batch(client)
-    incomplete = {"source": "bwb", "value": "000", "data": {}}
+    incomplete = {"source": "better_world_books", "value": "000", "data": {}}
     r = client.post(f"/v1/batches/{batch_id}/items", json=[incomplete])
     assert r.status_code == 201
     assert r.json()["added"] == 1
