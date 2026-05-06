@@ -7,9 +7,14 @@ from app.routes import batches, health, items
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.database import engine
-    from app.models import Base
+    from app.database import SessionLocal, engine
+    from app.models import Base, ImportSource, KNOWN_SOURCES
+
     Base.metadata.create_all(engine)
+    with SessionLocal() as db:
+        for src in KNOWN_SOURCES:
+            db.merge(ImportSource(**src))
+        db.commit()
     yield
 
 
