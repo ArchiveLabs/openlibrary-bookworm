@@ -12,9 +12,7 @@ from app.models.imports import (
     ItemIn,
     ItemResponse,
     ItemStatusPatch,
-    ItemValidationError,
     ItemsResult,
-    validate_import_record,
 )
 
 __all__ = [
@@ -31,7 +29,5 @@ __all__ = [
     "ItemIn",
     "ItemResponse",
     "ItemStatusPatch",
-    "ItemValidationError",
     "ItemsResult",
-    "validate_import_record",
 ]

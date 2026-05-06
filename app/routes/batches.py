@@ -5,16 +5,14 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import (
+    VALID_STATUSES,
     BatchCreate,
     BatchDetail,
     BatchResponse,
     ImportBatch,
     ImportItem,
     ItemIn,
-    ItemValidationError,
     ItemsResult,
-    VALID_STATUSES,
-    validate_import_record,
 )
 
 router = APIRouter(tags=["batches"])
@@ -63,6 +61,14 @@ def add_items(
     items: list[ItemIn],
     db: Session = Depends(get_db),
 ) -> ItemsResult:
+    """Stage records for import.
+
+    Content validation (title, authors, etc.) is OL's responsibility at import
+    time. BookWorm only validates source name and status — its own concerns.
+
+    Uniqueness is per-batch: the same (source, value) can exist in other
+    batches without conflict. Duplicates within this batch are silently skipped.
+    """
     if db.get(ImportBatch, batch_id) is None:
         raise HTTPException(status_code=404, detail="Batch not found")
 
@@ -74,22 +80,7 @@ def add_items(
         )
 
     added = skipped = 0
-    errors: list[ItemValidationError] = []
-
-    for idx, item in enumerate(items):
-        messages = validate_import_record(item.data)
-        if messages:
-            errors.append(ItemValidationError(
-                index=idx,
-                source=item.source,
-                value=item.value,
-                messages=messages,
-            ))
-            continue
-
-        # Use a savepoint per item so a duplicate-key violation only rolls back
-        # that one insert, not the whole batch. This also handles concurrent
-        # requests inserting the same (batch_id, source, value) without a 500.
+    for item in items:
         sp = db.begin_nested()
         try:
             db.add(ImportItem(
@@ -107,4 +98,4 @@ def add_items(
             skipped += 1
 
     db.commit()
-    return ItemsResult(added=added, skipped=skipped, errors=errors)
+    return ItemsResult(added=added, skipped=skipped)

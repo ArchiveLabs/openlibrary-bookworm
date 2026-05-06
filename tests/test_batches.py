@@ -10,8 +10,8 @@ ITEM2 = {
 }
 
 
-def _batch(client, name="test-batch"):
-    return client.post("/v1/batches", json={"name": name}).json()["id"]
+def _batch(client, name="test-batch", submitter=None):
+    return client.post("/v1/batches", json={"name": name, "submitter": submitter}).json()["id"]
 
 
 def test_health(client):
@@ -42,42 +42,50 @@ def test_add_items_and_counts(client):
     batch_id = _batch(client)
     r = client.post(f"/v1/batches/{batch_id}/items", json=[ITEM, ITEM2])
     assert r.status_code == 201
-    body = r.json()
-    assert body["added"] == 2
-    assert body["skipped"] == 0
-    assert body["errors"] == []
+    assert r.json() == {"added": 2, "skipped": 0}
     assert client.get(f"/v1/batches/{batch_id}").json()["item_counts"] == {"pending": 2}
 
 
-def test_add_items_skips_duplicates(client):
+def test_duplicate_within_same_batch_is_skipped(client):
+    """Submitting the same (source, value) twice to one batch skips the second."""
     batch_id = _batch(client)
     client.post(f"/v1/batches/{batch_id}/items", json=[ITEM])
     r = client.post(f"/v1/batches/{batch_id}/items", json=[ITEM])
-    body = r.json()
-    assert body["added"] == 0
-    assert body["skipped"] == 1
-    assert body["errors"] == []
+    assert r.json() == {"added": 0, "skipped": 1}
 
 
-def test_add_items_validation_error(client):
+def test_same_record_allowed_in_different_batches(client):
+    """bwb:X in Jim's batch does not block bwb:X in Mek's batch."""
+    jim_batch = _batch(client, name="bwb-2026-04", submitter="jim")
+    mek_batch = _batch(client, name="bwb-2026-05", submitter="mek")
+    client.post(f"/v1/batches/{jim_batch}/items", json=[ITEM])
+    r = client.post(f"/v1/batches/{mek_batch}/items", json=[ITEM])
+    assert r.json() == {"added": 1, "skipped": 0}
+
+
+def test_same_submitter_different_batches_allowed(client):
+    """Jim can re-import bwb:X in a later batch run."""
+    batch_a = _batch(client, name="bwb-2026-04", submitter="jim")
+    batch_b = _batch(client, name="bwb-2026-05", submitter="jim")
+    client.post(f"/v1/batches/{batch_a}/items", json=[ITEM])
+    r = client.post(f"/v1/batches/{batch_b}/items", json=[ITEM])
+    assert r.json() == {"added": 1, "skipped": 0}
+
+
+def test_incomplete_data_accepted(client):
+    """BookWorm does not validate record content — that's OL's job at import time."""
     batch_id = _batch(client)
-    bad = {"source": "bwb", "value": "999", "data": {}}
-    r = client.post(f"/v1/batches/{batch_id}/items", json=[bad])
+    incomplete = {"source": "bwb", "value": "000", "data": {}}
+    r = client.post(f"/v1/batches/{batch_id}/items", json=[incomplete])
     assert r.status_code == 201
-    body = r.json()
-    assert body["added"] == 0
-    assert len(body["errors"]) == 1
-    err = body["errors"][0]
-    assert err["source"] == "bwb"
-    assert err["value"] == "999"
-    assert any("title" in m or "source_records" in m for m in err["messages"])
+    assert r.json()["added"] == 1
 
 
 def test_add_items_unknown_source_rejected(client):
+    """source must be a name from identifiers.yml."""
     batch_id = _batch(client)
-    bad = {"source": "made_up_source", "value": "123", "data": {"title": "x", "source_records": ["x:123"]}}
-    r = client.post(f"/v1/batches/{batch_id}/items", json=[bad])
-    assert r.status_code == 422
+    bad = {"source": "made_up_source", "value": "123", "data": {}}
+    assert client.post(f"/v1/batches/{batch_id}/items", json=[bad]).status_code == 422
 
 
 def test_add_items_invalid_status(client):
@@ -88,22 +96,3 @@ def test_add_items_invalid_status(client):
 
 def test_add_items_batch_not_found(client):
     assert client.post("/v1/batches/9999/items", json=[]).status_code == 404
-
-
-def test_mixed_valid_and_invalid(client):
-    """Valid items are inserted even when some records in the same request fail validation."""
-    batch_id = _batch(client)
-    bad = {"source": "bwb", "value": "bad-1", "data": {}}
-    r = client.post(f"/v1/batches/{batch_id}/items", json=[ITEM, bad])
-    body = r.json()
-    assert body["added"] == 1
-    assert body["skipped"] == 0
-    assert len(body["errors"]) == 1
-
-
-def test_source_response_matches_ol_identifier_name(client):
-    """source in the response is the OL identifier name, not a shorthand."""
-    batch_id = _batch(client)
-    client.post(f"/v1/batches/{batch_id}/items", json=[ITEM])
-    item = client.get("/v1/items/pending").json()[0]
-    assert item["source"] == "bwb"
