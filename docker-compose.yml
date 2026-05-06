@@ -6,7 +6,9 @@ services:
       POSTGRES_USER: bookworm
       POSTGRES_PASSWORD: bookworm
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # Bind-mount so data survives image rebuilds and `docker compose down`.
+      # On ol-home0 set PGDATA_PATH=/1/bookworm/pgdata in .env.
+      - ${PGDATA_PATH:-./pgdata}:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
@@ -25,6 +27,3 @@ services:
         condition: service_healthy
     volumes:
       - .:/app
-
-volumes:
-  pgdata:
