@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:18beta1-alpine
+    environment:
+      POSTGRES_DB: bookworm
+      POSTGRES_USER: bookworm
+      POSTGRES_PASSWORD: bookworm
+    volumes:
+      # Bind-mount so data survives image rebuilds and `docker compose down`.
+      # On ol-home0 set PGDATA_PATH=/1/bookworm/pgdata in .env.
+      - ${PGDATA_PATH:-./pgdata}:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookworm"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app

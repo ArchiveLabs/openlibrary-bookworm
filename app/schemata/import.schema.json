@@ -1,0 +1,164 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "BookWorm Import Schema",
+  "description": "Vendored from openlibrary/schemata/import.schema.json (external $refs inlined). Required fields are relaxed from OL's source: OL's catalog importer accepts records via two paths (CompleteBook or StrongIdentifierBook); we only require the minimum both paths share. Full field-level validation still happens at OL import time.",
+  "_source": "https://github.com/internetarchive/openlibrary/blob/master/openlibrary/schemata/import.schema.json",
+  "type": "object",
+  "required": ["title", "source_records"],
+  "additionalProperties": false,
+  "properties": {
+    "title":    { "type": "string" },
+    "subtitle": { "type": "string" },
+    "source_records": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "publishers": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "authors": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/import_author" }
+    },
+    "contributor": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/import_contributor" }
+    },
+    "publish_date": {
+      "type": "string",
+      "description": "Publication date in Extended Date/Time Format (EDTF). See https://www.loc.gov/standards/datetime/",
+      "examples": ["2017", "2017-07", "2017-07-11"]
+    },
+    "publish_places": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "number_of_pages": { "type": "number" },
+    "pagination":      { "type": "string" },
+    "by_statement":    { "type": "string" },
+    "description":     { "type": "string" },
+    "publish_country": {
+      "type": "string",
+      "pattern": "^[a-z]{2,3}$",
+      "description": "MARC21 country code. See https://www.loc.gov/marc/countries/cou_home.html"
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z]{3}$",
+        "description": "MARC21 language code. See https://www.loc.gov/marc/languages/language_code.html"
+      }
+    },
+    "translated_from": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z]{3}$"
+      }
+    },
+    "translation_of": { "type": "string" },
+    "isbn_10": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^([0-9][- ]*){9}[0-9X]$"
+      }
+    },
+    "isbn_13": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^([0-9][- ]*){13}$"
+      }
+    },
+    "oclc_numbers": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "lccn": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "lc_classifications": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "dewey_decimal_class": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "notes":        { "type": "string" },
+    "edition_name": { "type": "string" },
+    "table_of_contents": { "type": "array" },
+    "series": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "subjects":        { "type": "array", "items": { "type": "string" } },
+    "subject_times":   { "type": "array", "items": { "type": "string" } },
+    "subject_people":  { "type": "array", "items": { "type": "string" } },
+    "subject_places":  { "type": "array", "items": { "type": "string" } },
+    "contributions":   { "type": "array", "items": { "type": "string" } },
+    "work_titles":     { "type": "array", "items": { "type": "string" } },
+    "other_titles":    { "type": "array", "items": { "type": "string" } },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["url", "title"],
+        "additionalProperties": false,
+        "properties": {
+          "url":   { "type": "string" },
+          "title": { "type": "string" },
+          "type": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key"],
+            "properties": {
+              "key": { "enum": ["/type/link"] }
+            }
+          }
+        }
+      }
+    },
+    "physical_format":     { "type": "string" },
+    "physical_dimensions": { "type": "string" },
+    "weight":              { "type": "string" },
+    "identifiers": {
+      "type": "object",
+      "patternProperties": {
+        "^\\w+": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "cover": {
+      "type": "string",
+      "description": "URL for the edition cover image"
+    }
+  },
+  "definitions": {
+    "import_author": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name":          { "type": "string" },
+        "personal_name": { "type": "string" },
+        "birth_date":    { "type": "string" },
+        "death_date":    { "type": "string" },
+        "entity_type":   { "type": "string", "enum": ["person", "org", "event"] },
+        "title":         { "type": "string" }
+      }
+    },
+    "import_contributor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "role": { "type": "string" },
+        "name": { "type": "string" }
+      }
+    }
+  }
+}
