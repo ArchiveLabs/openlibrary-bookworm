@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: bookworm
+      POSTGRES_PASSWORD: bookworm
+      POSTGRES_DB: bookworm
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookworm -d bookworm"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  migrate:
+    build: .
+    command: ["alembic", "upgrade", "head"]
+    environment: &app-env
+      BOOKWORM_DATABASE_URL: postgresql+psycopg://bookworm:bookworm@postgres:5432/bookworm
+    depends_on:
+      postgres:
+        condition: service_healthy
+  api:
+    build: .
+    environment: *app-env
+    ports:
+      - "127.0.0.1:8000-8001:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    stop_grace_period: 60s
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+
