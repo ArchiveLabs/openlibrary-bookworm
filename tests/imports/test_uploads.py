@@ -2,7 +2,7 @@ import json
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import event, func
+from sqlalchemy import event, func, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, select
 
@@ -199,7 +199,26 @@ async def test_migrations_match_models_and_round_trip(database):
 
     config = Config("alembic.ini")
     command.check(config)
+    command.downgrade(config, "b014c2a8d790")
+    with database.connect() as connection:
+        assert (
+            connection.execute(text("SELECT to_regclass('public.import_items')")).scalar_one()
+            is None
+        )
+        assert (
+            connection.execute(
+                text("SELECT to_regclass('procrastinate.procrastinate_jobs')")
+            ).scalar_one()
+            is not None
+        )
     command.downgrade(config, "base")
+    with database.connect() as connection:
+        assert (
+            connection.execute(
+                text("SELECT count(*) FROM pg_namespace WHERE nspname = 'procrastinate'")
+            ).scalar_one()
+            == 0
+        )
     command.upgrade(config, "head")
     command.check(config)
 

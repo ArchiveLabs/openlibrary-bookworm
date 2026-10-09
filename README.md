@@ -124,7 +124,9 @@ Logs report election, ingestion failures, and Procrastinate task outcomes. Run m
 
 ## Verification
 
-Run `uv run alembic upgrade head` before starting the updated app. Migrations install Procrastinate, link existing items to their latest tasks, and remove the old attempt table, item status, and retry counters. Existing item errors and queued tasks are preserved; historical attempts and results are discarded. Stop API workers before migrating.
+Run `uv run alembic upgrade head` before starting the app. Two baseline migrations install the frozen Procrastinate 3.10.0 schema, then Bookworm's tables. Future schema changes should use new migrations rather than editing these baselines.
+
+The squashed history retains the existing head revision (`d391b724e608`), so databases already at that revision need no changes. Databases on earlier revisions must be upgraded to that head using the old migration files before switching to this history.
 
 Tests create and drop a uniquely named disposable database on the configured Postgres server. The test database account needs permission to create databases. They never truncate the application database. Set `BOOKWORM_TEST_DATABASE_URL` to choose a different test server.
 
